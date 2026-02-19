@@ -1,0 +1,115 @@
+# MovingCap Ethernet CODE
+# mcdrive micropython library for MovingCap motor functions
+# syntax test and documentation
+
+# use the the id comment tag to set the python script ID as shown on the drive's home page
+#id mcdriveModuleOverview.py 2025-02-03 oh
+
+import mcdrive as mc
+import sys
+
+# sys module - common functions:
+# sys.wait(<x>) - wait for <x> milliseconds
+# x = sys.time() - read the system timer in milliseconds resolution
+#
+# mcdrive module functions:
+# WriteObject, ReadObject, WriteControl, SendEmcyMsg, EnableDrive, StopMotion, PowerQuit,
+# GoPosAbs, GoPosRel, GoVel, SetTargetPos, SetPosVel, SetAcc, SetDec, GoHome, 
+# SetOpMode, GetOpMode, SetTorque, ChkIn, SetOut, ClearOut, 
+# GetActualPos, ReadStatusword, ChkReady, ChkError, ChkMfrStatus,
+#
+# print output is sent via UDP port 14999
+# TIP: Use a TCP/UDP text terminal like "Docklight Scripting" and connect to UDP port 14999
+# to see the print output, along with micropython debug messages, including runtime errors and 
+# the related line number. 
+
+# Set 6092h.01h Feed constant to 360 --> one turn = 360°
+mc.WriteObject(0x6092, 0x01, 360)
+
+# mc.ChkError() - check if the drive has error status set. Return value 1 or zero.
+print ('mc.ChkError() = %d' % mc.ChkError())
+
+# mc.ChkMfrStatus(0..15) - checks specific bits of manufacturer error status word 1002h.0h. Return value 1 or zero.
+for x in range(0, 15):
+    print ('mc.ChkMfrStatus(%d) = %d' % (x, mc.ChkMfrStatus(x)))
+# mc.ChkIn(1..8) - checks digital input no <x>. Return value 1 or zero.
+for x in range(1, 8):
+    print ('mc.ChkIn(%d) = %d' % (x, mc.ChkIn(x)))
+
+# mc.WriteObject(<index>, <subindex>, <value>) - write object value
+mc.WriteObject(0x6060, 0x0, 0)
+# result = mc.ReadObject(<index>, <subindex>, <value>) - read object value
+print('mc.ReadObject(0x6041, 0x0) = %d' % mc.ReadObject(0x6041, 0x0))
+# mc.WriteControl(<value>) - shortcut. Write control word 6040h.0h.
+mc.WriteControl(0x80)
+# mc.EnableDrive() - switch on drive / switch control word 6040h.0h to value 0Fh.
+mc.EnableDrive()
+# mc.SetTargetPos(<target>) - shortcut. Write target position 607Ah.0h.
+mc.SetTargetPos(100)
+# mc.SetPosVel(<profileVelocity>) - shortcut. Write profile velocity 6081h.0h.
+mc.SetPosVel(200)
+# mc.SetOpMode(<opMode>) - shortcut. Write operation mode 6060h.0h.
+mc.SetOpMode(1)
+mc.WriteControl(0x1f)
+while (mc.ChkReady() == 0):
+    sys.wait(1)
+# mc.GoPosAbs(<targetPos>):
+# - switch to operation mode 6060h.0h. = 1 (profile position), if required
+# - set target position 607Ah.0h
+# - set control word 6040h.0h to 3Fh (new "single setpoint", delete set of setpoint list)
+# NOTE: as alternative, use mc.WriteObject(0x6040, 0, 0x1F) - set of setpoint. Or mc.WriteObject(0x6040, 0, 0x21F) - change on setpoint.
+mc.GoPosAbs(1000)
+while (mc.ChkReady() == 0):
+    sys.wait(1)
+mc.GoPosAbs(-1000)
+while (mc.ChkReady() == 0):
+    sys.wait(1)
+mc.GoPosRel(2000)
+while (mc.ChkReady() == 0):
+    sys.wait(1)
+mc.GoPosRel(0)
+while (mc.ChkReady() == 0):
+    sys.wait(1)
+# mc.GoVel(<targetVelocity>):
+# - switch to operation mode 6060h.0h. = 3 (profile velocity), if required
+# - set target velocity 60ffh.0h 
+mc.GoVel(1440)
+# sys.wait(<milliseconds>) - wait for the specified amount of time
+sys.wait(3000)
+mc.GoVel(-1440)
+sys.wait(3000)
+print ('mc.GetActualPos() = %d' % mc.GetActualPos())
+mc.GoVel(0)
+sys.wait(1000)
+print ('mc.GetOpMode() = %d' % mc.GetOpMode())
+mc.SetOpMode(1)
+print ('mc.GetOpMode() = %d' % mc.GetOpMode())
+# mc.SetOut(1..8) - set digital output no <x>
+mc.SetOut(1)
+mc.SetOut(4)
+print ('mc.ReadObject(0x60fe, 0x1) = %d' % mc.ReadObject(0x60fe, 0x1))
+# mc.ClearOut(1..8) - clear/reset digital output no <x>
+mc.ClearOut(1)
+mc.ClearOut(4)
+
+# Only for MovingCap349 EC motor / not stepper: 
+# # mc.SetTorque(1..1000) - shortcut. Write 6073h.0h Max Current. Sets the maximum # torque/current between 1 and 1000 (nominal current) 
+# mc.SetTorque(100)
+# print ('mc.ReadObject(0x6073, 0x0) = %d' % mc.ReadObject(0x6073, 0x0))
+# print ('mc.ReadObject(0x60fe, 0x1) = %d' % mc.ReadObject(0x60fe, 0x1))
+# # mc.GoHome(<ds402HomingMethod>, <homingVelocity>, <homingAcceleration>, # <homingOffset>)
+# # (See quick reference manual, ds402 parameter for referencing)
+# mc.GoHome(-19, 100, 400, -1000)
+# while (mc.ChkReady() == 0):
+#     sys.wait(1)
+# mc.SetTorque(1000)
+
+# mc.PowerQuit(): 
+# - transfer state machine back to "Switch On Disabled"
+# - clear error, if present ( control word = 80h -> reset) 
+mc.PowerQuit()
+
+#private
+# you can use a "#private" comment tag to hide any code following this line. 
+# The MovingCap Script Viewer will NOT display this code.
+print ('Finished')

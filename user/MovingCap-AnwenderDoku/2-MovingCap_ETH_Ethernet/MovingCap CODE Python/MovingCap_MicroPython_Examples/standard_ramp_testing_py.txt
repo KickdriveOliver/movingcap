@@ -1,0 +1,72 @@
+#id rev3 flatTRACK RABBIT ramp testing 2025-02-04 oh
+# Fullmo MovingCap CODE - micropython example.
+# original file name: standard_ramp_testing.py
+# Tests various motion profiles
+import sys
+import mcdrive as mc
+
+def WaitTargetReached(): # Check statusword for "target reached" and "no error" 
+	while (mc.ChkReady() == 0):
+		sys.wait(1)
+	while (mc.ChkError() != 0):
+		sys.wait(1)
+	
+def doRamp(runNo, target, speed, acc, jrk):
+	mc.SetAcc(acc)
+	mc.SetDec(acc)
+	mc.WriteObject(0x60A4, 0, jrk)
+	mc.SetPosVel(speed)
+	mc.WriteObject(0x340c, 0x01, runNo)
+	mc.GoPosAbs(target)
+	WaitTargetReached()
+	mc.WriteObject(0x340c, 0x01, 0)
+	sys.wait(2000)
+	mc.WriteObject(0x340c, 0x01, -runNo)
+	mc.GoPosAbs(0)
+	WaitTargetReached()
+	mc.WriteObject(0x340c, 0x01, 0)
+	sys.wait(2000)
+
+def doSetOfRamps(maxPos):
+	doRamp(1, maxPos, 100000, 5000, 50000)
+	doRamp(1, maxPos, 100000, 10000, 50000)
+	doRamp(1, maxPos, 100000, 20000, 100000)
+
+	doRamp(1, maxPos, 800000, 10000, 100000)
+	doRamp(1, maxPos, 800000, 15000, 200000)
+	doRamp(1, maxPos, 800000, 25000, 500000)
+	
+	doRamp(1, maxPos // 2, 20000, 1000, 10000)
+	doRamp(1, maxPos // 2, 20000, 2000, 20000)
+	doRamp(1, maxPos // 2, 20000, 5000, 50000)
+	
+	doRamp(1, maxPos // 10, 5000, 500, 5000)
+	doRamp(1, maxPos // 10, 5000, 1000, 10000)
+	doRamp(1, maxPos // 10, 5000, 2000, 20000)
+
+# safety: only run this script if softlimit objects are set up properly
+# - limit min must be 0
+# - limit max must be at least 100000
+softLimitMin = mc.ReadObject(0x607d, 1) 
+softLimitMax = mc.ReadObject(0x607d, 2)
+if (softLimitMin != 0 or softLimitMax < 100000 or softLimitMax > 999999):
+	print("flatTRACK ramp testing abort. Check softlimit objects 607Dh.1h and 607Dh.2h!") 
+
+else:
+	# reset the feedback variable (Python int8 object) 
+	mc.WriteObject(0x340c, 0x01, 0)
+	# initial wait, don't surprise me with immediate movement
+	sys.wait(5000)
+	# switch on positioning mode
+	mc.EnableDrive()
+
+	# back to start
+	mc.SetAcc(10)
+	mc.SetDec(10)
+	mc.SetPosVel(40000)
+	mc.GoPosAbs(0)
+	WaitTargetReached()
+	
+	while (1):
+		doSetOfRamps(softLimitMax)
+

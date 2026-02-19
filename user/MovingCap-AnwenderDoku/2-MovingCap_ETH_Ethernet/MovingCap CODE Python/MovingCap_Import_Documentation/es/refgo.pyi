@@ -1,0 +1,107 @@
+"""Stub/interfaz del módulo refgo para variadores servo MovingCap fullmo / CODE / Micropython
+
+El módulo/biblioteca Python refgo proporciona acceso al intérprete de protocolo ASCII en el puerto TCP 10001.
+
+REFGO es el protocolo de comando ASCII de MovingCap para el control del variador y el monitoreo de estado. Proporciona
+una interfaz simple basada en texto para operaciones comunes del variador sin requerir conocimiento del
+diccionario de objetos CiA402.
+
+Este módulo admite dos áreas de aplicaciones: 
+
+1. Ejecución directa de comando RefGo mediante `cmd()`
+   - Enviar comandos REFGO y recibir respuestas directamente
+   - Análisis automático y conversión de valor de retorno
+   
+2. Acceso a los datos del servidor del puerto TCP 10001 de MovingCap, usando `open()`, `read()`, `write()`, `close()`:
+   - lectura/escucha de datos REFGO enviados al puerto servidor 10001 de MovingCap
+   - escritura de sus propias respuestas a la solicitud del cliente. 
+   - Permite implementaciones de protocolo personalizadas, ej. para capas de compatibilidad de protocolo con aplicaciones maestras que usan el
+     protocolo ASCII XENAX® de JennyScience. 
+
+Nota: Los comandos 'TS' y 'TP' retornan valores enteros directamente para un rendimiento mejorado,
+mientras que otros comandos retornan respuestas de cadena.
+"""
+__author__ =  "Oliver Heggelbacher"
+__email__ = "oliver.heggelbacher@fullmo.de"
+__version__ = "50.00.10.xx"
+__date__ = "2025-11-04"
+
+def cmd(command: str):
+    """Ejecutar comando RefGo y retornar respuesta.
+
+    Así es como puede acceder al conjunto completo de comandos REFGO desde su script Python MovingCap CODE.
+    
+    Optimización especial: Los comandos 'TS' (tell status), 'TPSR' (tell process status register) y 'TP' (tell position)
+    retornan valores enteros en lugar de cadenas para un mejor rendimiento y 
+    para evitar conversión innecesaria del lado del script. 
+
+    :param command: La cadena de comando RefGo, sin terminación de línea CR/LF. 
+        Ejemplo: 'TS', 'TP', 'G5000'
+    :type command: str
+    :return: Cadena de respuesta RefGo, o int para comandos TS/TP. 
+        Retorna None si no hay respuesta o error.
+    :rtype: str or int or None
+
+    Ejemplos:
+        refgo.cmd("TS")  # Obtener posición actual (retorna int)
+        refgo.cmd("G5000")  # Ir a posición 5000
+    """
+    pass
+
+def open(redirect_mode: int) -> int:
+    """Abrir el canal de comunicación RefGo.
+    
+    Abre el acceso al puerto TCP del protocolo RefGo (10001) para aumentar o reemplazar
+    el intérprete de comandos REFGO integrado.
+
+    :param redirect_mode: El modo de redirección:
+        1 - Reenviar todos los datos REFGO entrantes a este script Python.
+        2 - Reenviar solo los datos que no han sido procesados por el intérprete de comandos 
+            REFGO integrado
+        3 - Desactivar el intérprete de comandos REFGO integrado y reenviar todo 
+            a este script Python.
+    :return: 0 si tiene éxito, distinto de cero en caso de error.
+    :rtype: int
+    """
+    returnCode = 0
+    return returnCode
+
+def read() -> str:
+    """Leer comando entrante
+    
+    Lee el siguiente comando de texto que ha sido recibido en el puerto servidor TCP REFGO 10001.
+
+    :return: El comando como cadena, sin el terminador CR. None si no hay comando disponible.
+    :rtype: str or None
+    """
+    pass
+
+def write(msg: str) -> int:
+    """Escribir datos en el canal RefGo especificado.
+    
+    Envía su respuesta de comando REFGO al cliente conectado. 
+
+    :param msg: La respuesta a enviar.
+    :type msg: str   
+    :return: 0 si tiene éxito, distinto de cero en caso de error.
+    :rtype: int
+    
+    Ejemplo:
+        refgo.write('OK')  # Enviar respuesta 'OK'
+        refgo.write('100')  # Enviar respuesta numérica
+    """
+    returnCode = 0
+    return returnCode
+
+def close(index: int):
+    """Cerrar un canal de comunicación RefGo.
+    
+    Cierra el canal abierto con open() y libera los recursos asociados.
+
+    :param index: El índice del canal como se especificó al llamar a open().
+    :type index: int
+    
+    Ejemplo:
+        refgo.close(0)  # Cerrar canal 0
+    """
+    pass

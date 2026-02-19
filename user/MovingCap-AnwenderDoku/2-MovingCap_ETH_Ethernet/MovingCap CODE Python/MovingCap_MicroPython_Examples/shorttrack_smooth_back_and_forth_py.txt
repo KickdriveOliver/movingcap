@@ -1,0 +1,96 @@
+#id shorttrack_smooth_back_and_forth.py 2024-12-17 oh
+# Fullmo MovingCap CODE - micropython example.
+# original file name: shorttrack_smooth_back_and_forth.py
+# MovingCap flatTRACK/shortTRACK application demo
+# smooth&quiet back and forth motion for new RABBIT position control 
+# precondition: 
+# - firmware v53.02.00.43 or higher 
+# - softlimit object 607Dh.1h and 607D.2h set
+import sys
+import mcdrive as mc
+
+PARAMETER_ADJUSTMENTS = """
+050.6067h.00h,unsigned32,50 # Position window
+050.6068h.00h,unsigned16,100 # Position window time
+050.6081h.00h,unsigned32,17000 # Profile_velocity
+050.6083h.00h,unsigned32,1000 # Profile acceleration
+"""
+
+def main():
+    """
+    flatTRACK/shortTRACK application demo
+
+    - use the parameters from PARAMETER_ADJUSTMENTS
+    - check softlimit 
+    - wait 5 seconds
+    - start motion between softlimit min and max
+    """
+
+    WriteObjectsFromKickdriveList(PARAMETER_ADJUSTMENTS)
+
+    # safety: only run this script if softlimit objects are set up properly
+    softLimitMin = mc.ReadObject(0x607d, 1) 
+    softLimitMax = mc.ReadObject(0x607d, 2)
+
+    if ((softLimitMin == 0 and softLimitMax == 0) or softLimitMax <= (softLimitMin + 1000)):
+        print("flatTRACK abort. Check softlimit objects 607Dh.1h and 607D.2h!") 
+        return
+    
+    # initial wait, don't surprise me with immediate movement
+    sys.wait(5000)
+
+    # enable operaton and go
+    mc.EnableDrive()
+    while(1):
+        mc.GoPosAbs(softLimitMin)
+        ChkReady()
+        sys.wait(100)
+        mc.GoPosAbs(softLimitMax)
+        ChkReady()
+        sys.wait(100)
+
+def WriteObjectsFromKickdriveList(kickdriveTxtExportString):
+    """
+    This function takes a Kickdrive Object Editor text list and sets the parameters
+
+    Parameters:
+    kickdriveTxtExportString (str): A string containing KickDrive export data. 
+    EEach line represents a CANopen object as comma seperated list  format "ID,Type,Value". 
+    IDs contain NodeId, index and subindex in format 050.3401h.03h (for example) 
+    Values are in decimal format. Everything after '#' is  a comment / ignored.
+
+    Returns:
+    None. The function prints a message for each object written to the drive.
+    """
+    # Create a list of parameters
+    params = [line.split(',') for line in kickdriveTxtExportString.split('\n') if line.strip()]
+    # Iterate through each parameter
+    for param in params:
+        # Skip lines without an ID
+        if len(param) < 2:
+            continue
+        id = param[0].split('.')
+        index = int(id[1].rstrip('h'), 16)
+        subindex = int(id[2].rstrip('h'), 16)
+        value = int(param[2].split('#')[0])
+        mc.WriteObject(index, subindex, value)
+        print ("Writing object " + hex(index) + "," + hex(subindex) + " = " + str(value))
+
+def ChkReady(): 
+    # make sure movement has started
+    sys.wait(100) 
+    # Check statusword for "target reached"
+    while (mc.ChkReady() == 0):
+        sys.wait(1)
+    # only continue if no error. restart attempt after approx 10 seconds
+    restartTimer = 0
+    while ((restartTimer < 10000) and (mc.ChkError() > 0)):
+        sys.wait(1)
+        restartTimer = restartTimer + 1
+    if (restartTimer >= 10000): 
+        # clear error and restart
+        mc.EnableDrive() 
+		
+main()
+
+

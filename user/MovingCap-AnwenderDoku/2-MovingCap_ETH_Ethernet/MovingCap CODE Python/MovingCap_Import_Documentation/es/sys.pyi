@@ -1,0 +1,235 @@
+"""Módulo sys stub/interfaz para servocontroladores fullmo MovingCap / CODE / Micropython
+
+El módulo `sys` proporciona parámetros y funciones específicas del sistema para MovingCap MicroPython.
+
+Este módulo incluye:
+- Funciones del módulo sys estándar de MicroPython/CPython (subconjunto de v1.9.4)
+- Extensiones específicas de MovingCap para aplicaciones de control en tiempo real
+- Funciones de compatibilidad para controladores CANopen MovingCap heredados con pymite/Python-On-A-Chip
+
+Funciones Estándar:
+    - version - Cadena de versión de Python
+    - version_info - Tupla de versión de Python (major, minor, patch)
+    - implementation - Detalles de implementación (name, version, platform, platver)
+    - platform - Cadena de identificación de plataforma
+    - byteorder - Orden de bytes nativo ('little' o 'big')
+    - exit([retval]) - Salir del programa
+    - print_exception(exc, [file]) - Imprimir rastreo de excepción
+    - exc_info() - Obtener información de excepción actual como tupla
+
+Extensiones MovingCap:
+    - cycle_time_ms(period) - Ayudante para bucles de tiempo de ciclo fijo
+    - time() - Compatibilidad: Obtener temporizador de milisegundos (use time.ticks_ms() en código nuevo)
+    - wait(ms) - Compatibilidad: Retardo en milisegundos (use time.sleep_ms() en código nuevo)
+
+Para documentación completa del módulo sys de MicroPython, consulte:
+https://docs.micropython.org/en/v1.9.4/pyboard/library/sys.html
+
+Ejemplo de Uso:
+  import sys
+  import time
+
+  def do_control_task():
+      dummy = 2000
+      for runs in range((time.ticks_ms() % 100) + 10):
+          dummy = dummy - 20
+          dummy2 = dummy + 10
+
+  # Verificar versión de Python
+  print("sys.version (python) = %s" % sys.version)
+  # Verificar detalles de implementación
+  print("sys.implementation = %s" % repr(sys.implementation))
+
+  # Bucle de control de tiempo de ciclo fijo
+  sys.cycle_time_ms(0)  # Restablecer temporizador de ciclo
+  for cycle in range(20):
+      # Realizar operaciones de control
+      do_control_task()
+      remaining = sys.cycle_time_ms(10)  # Asegurar tiempo de ciclo de 10ms
+      print ("Ciclo de 10 mseg, ronda = %d, tiempo restante = %d" % (cycle, remaining)) 
+
+  # Manejo de excepciones
+  try:
+      risky_operation()
+  except Exception as e:
+      sys.print_exception(e)
+      sys.exit(1)
+"""
+__author__ =  "Oliver Heggelbacher"
+__email__ = "oliver.heggelbacher@fullmo.de"
+__version__ = "50.00.10.xx"
+__date__ = "2026-01-19"
+
+# Atributos del módulo
+version: str
+"""Cadena de versión del lenguaje Python (p.ej., "3.4.0")."""
+
+version_info: tuple
+"""Versión del lenguaje Python como tupla (major, minor, patch)."""
+
+class _Implementation:
+    """Objeto de información de implementación."""
+    name: str
+    """Nombre de implementación ("micropython")."""
+    version: tuple
+    """Tupla de versión de MicroPython (major, minor, micro)."""
+    platform: str
+    """Nombre de plataforma ("movingcap")."""
+    platver: tuple
+    """Tupla de versión de MovingCap (dev_type, major, minor, revision)."""
+
+implementation: _Implementation
+"""Detalles de implementación incluyendo versiones de MicroPython y MovingCap."""
+
+platform: str
+"""Cadena de identificación de plataforma."""
+
+byteorder: str
+"""Orden de bytes nativo: 'little' o 'big'."""
+
+stdin: object
+"""Flujo de entrada estándar."""
+
+stdout: object
+"""Flujo de salida estándar."""
+
+stderr: object
+"""Flujo de error estándar."""
+
+def exit(retval: int = 0):
+    """Salir del programa lanzando excepción SystemExit.
+    
+    :param retval: Código de salida (0 para éxito, distinto de cero para error). Por defecto es 0.
+    :type retval: int
+    :raises SystemExit: Siempre se lanza para terminar el programa.
+    
+    Ejemplo:
+        if error_condition:
+            sys.exit(1)  # Salir con código de error 1
+    """
+    pass
+
+def print_exception(exc, file=None):
+    """Imprimir rastreo de excepción a un archivo o stdout.
+    
+    Imprime el tipo de excepción, mensaje y rastreo en formato legible.
+    Si no se especifica archivo, imprime a stdout.
+    
+    :param exc: Objeto de excepción a imprimir.
+    :type exc: Exception
+    :param file: Flujo de archivo opcional donde escribir. Si es None, usa stdout.
+    :type file: objeto tipo archivo o None
+    
+    Ejemplo:
+        try:
+            risky_operation()
+        except Exception as e:
+            sys.print_exception(e)
+            # o escribir a archivo:
+            # with open('error.log', 'w') as f:
+            #     sys.print_exception(e, f)
+    """
+    pass
+
+def exc_info() -> tuple:
+    """Obtener información sobre la excepción actual.
+    
+    Devuelve una tupla conteniendo (tipo, valor, rastreo) de la excepción actual.
+    Si no se está manejando ninguna excepción, devuelve (None, None, None).
+    
+    :return: Tupla de (exception_type, exception_value, traceback).
+    :rtype: tuple
+    
+    Ejemplo:
+        try:
+            1 / 0
+        except:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            print(exc_type)  # <class 'ZeroDivisionError'>
+    """
+    pass
+
+
+def cycle_time_ms(period: int) -> int:
+    """Ayudante para bucles de tiempo de ciclo fijo para aplicaciones de control en tiempo real.
+    
+    Esta función asegura que un bucle de control se ejecute con un tiempo de ciclo fijo y preciso,
+    compensando los tiempos de ejecución variables del cuerpo del bucle. Mantiene la temporización
+    retrasándose según sea necesario para alcanzar el periodo objetivo.
+    
+    Patrón de uso:
+    1. Llamar con valor negativo (p.ej., -1) para restablecer/inicializar el temporizador de ciclo
+    2. Llamar con el período deseado (ms) al final de cada iteración del bucle
+    
+    La función calcula el tiempo restante hasta que debería comenzar el siguiente ciclo y retarda
+    en consecuencia. Si el cuerpo del bucle tarda más que el período, la función retorna
+    inmediatamente (sin retardo) y el valor de retorno será negativo o cero.
+    
+    :param period: Tiempo de ciclo objetivo en milisegundos. Use valor negativo para restablecer temporizador.
+    :type period: int
+    :return: Tiempo restante en milisegundos antes de completar el ciclo. Negativo si hay sobrepaso.
+    :rtype: int
+    
+    Ejemplo:
+        import sys
+        
+        # Inicializar temporizador de ciclo
+        sys.cycle_time_ms(-1)
+        
+        while True:
+            # Realizar tareas de control (tiempo de ejecución variable)
+            read_sensors()
+            calculate_control()
+            update_outputs()
+            
+            # Asegurar tiempo de ciclo fijo de 10ms
+            remaining = sys.cycle_time_ms(10)
+            if remaining < 0:
+                print("Advertencia: Sobrepaso de ciclo de", -remaining, "ms")
+    
+    Nota:
+        Para bucles de control en tiempo real de alta precisión donde la temporización consistente es crítica.
+        El tiempo de ciclo real puede tener pequeñas variaciones debido a la planificación del sistema.
+    """
+    pass
+
+def time() -> int:
+    """Obtener tiempo actual del sistema en milisegundos.
+    
+    Devuelve el valor del contador de milisegundos. Esta es una función de compatibilidad para
+    controladores CANopen MovingCap heredados con pymite/Python-On-A-Chip.
+    
+    **Obsoleto:** Use `time.ticks_ms()` del módulo `time` para nuevas aplicaciones.
+    
+    :return: Tiempo actual en milisegundos desde el inicio del sistema. (Micropython small int, entero con signo de 30 bits en la implementación actual).
+    :rtype: int
+    
+    Ejemplo:
+        start = sys.time()
+        # ... hacer algo ...
+        elapsed = sys.time() - start
+        print(f"La operación tomó {elapsed} ms")
+    
+    Ver también:
+        time.ticks_ms() - Función preferida para código nuevo
+    """
+    pass
+
+def wait(ms: int):
+    """Esperar los milisegundos especificados.
+    
+    Retarda la ejecución durante el número dado de milisegundos. Esta es una función de compatibilidad
+    para controladores CANopen MovingCap heredados con pymite/Python-On-A-Chip.
+    
+    **Obsoleto:** Use `time.sleep_ms()` del módulo `time` para nuevas aplicaciones.
+    
+    :param ms: Número de milisegundos a esperar.
+    :type ms: int
+    
+    Ejemplo:
+        sys.wait(100)  # Esperar 100 milisegundos
+    
+    Ver también:
+        time.sleep_ms() - Función preferida para código nuevo
+    """
+    pass

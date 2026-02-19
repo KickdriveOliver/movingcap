@@ -1,0 +1,191 @@
+"""time/utime module stub/interface for fullmo MovingCap servo drives / CODE / Micropython
+
+The `utime` module (alternatively: `time`) provides a subset of the MicroPython or CPython `time` module.
+
+This is a limited implementation for the MovingCap platform that provides timing and delay functions.
+Full date/time functionality (localtime, mktime, time) is not supported on MovingCap.
+
+For complete documentation on the standard MicroPython time module, see:
+https://docs.micropython.org/en/latest/library/time.html
+
+Available Functions:
+    - sleep(seconds) - Sleep for the specified number of seconds
+    - sleep_ms(ms) - Sleep for the specified number of milliseconds
+    - sleep_us(us) - Sleep for the specified number of microseconds
+    - ticks_ms() - Get millisecond counter value
+    - ticks_us() - Get microsecond counter value
+    - ticks_add(ticks, delta) - Add delta to a ticks value
+    - ticks_diff(ticks1, ticks2) - Calculate difference between ticks values
+
+Not Available on MovingCap:
+    - localtime() - Not supported (no RTC)
+    - mktime() - Not supported (no RTC)
+    - time() - Not supported (no RTC)
+    - ticks_cpu() - Not supported
+
+Usage Notes:
+    - Use this module for delays, timing measurements, and timeout implementations
+    - The ticks functions use wraparound arithmetic (32-bit counters)
+    - Always use ticks_diff() to compare ticks values to handle wraparound correctly
+    - For precise timing, prefer ticks_us() over ticks_ms()
+
+Example Usage:
+    import time  # or: import utime
+    
+    # Simple delays
+    time.sleep(1)  # Sleep 1 second
+    time.sleep_ms(100)  # Sleep 100 milliseconds
+    time.sleep_us(50)  # Sleep 50 microseconds
+    
+    # Timing measurement
+    start = time.ticks_ms()
+    # ... do something ...
+    elapsed = time.ticks_diff(time.ticks_ms(), start)
+    print("Elapsed:", elapsed, "ms")
+    
+    # Timeout implementation
+    timeout = 5000  # 5 second timeout
+    start = time.ticks_ms()
+    while condition:
+        if time.ticks_diff(time.ticks_ms(), start) > timeout:
+            print("Timeout!")
+            break
+"""
+__author__ =  "Oliver Heggelbacher"
+__email__ = "oliver.heggelbacher@fullmo.de"
+__version__ = "50.00.10.xx"
+__date__ = "2025-11-04"
+
+def sleep(seconds: int):
+    """Sleep for the specified number of seconds.
+    
+    Suspends execution for at least the given number of seconds.
+    The actual sleep time may be longer due to system scheduling.
+
+    NOTE: MovingCap MicroPython currently does not support floats. "seconds" cannot be a fractional number.
+    
+    :param seconds: Number of seconds to sleep.
+    :type seconds: int
+    
+    Example:
+        time.sleep(2)  # Sleep for 2 seconds
+        time.sleep(1)  # Sleep for 1 second
+    """
+    pass
+
+def sleep_ms(ms: int):
+    """Sleep for the specified number of milliseconds.
+    
+    Suspends execution for at least the given number of milliseconds.
+    More precise than sleep() for short delays.
+    
+    :param ms: Number of milliseconds to sleep.
+    :type ms: int
+    
+    Example:
+        time.sleep_ms(500)  # Sleep for 500 milliseconds
+        time.sleep_ms(10)   # Sleep for 10 milliseconds
+    """
+    pass
+
+def sleep_us(us: int):
+    """Sleep for the specified number of microseconds.
+    
+    Suspends execution for at least the given number of microseconds.
+    Most precise delay function available. For very short delays, use with caution
+    as system overhead may affect accuracy.
+    
+    :param us: Number of microseconds to sleep.
+    :type us: int
+    
+    Example:
+        time.sleep_us(1000)  # Sleep for 1000 microseconds (1 ms)
+        time.sleep_us(50)    # Sleep for 50 microseconds
+    """
+    pass
+
+def ticks_ms() -> int:
+    """Get the current millisecond counter value.
+    
+    Returns a monotonically increasing millisecond counter with arbitrary reference point.
+    The counter wraps around after reaching its maximum value (32-bit unsigned).
+    
+    Always use ticks_diff() to calculate time differences to handle wraparound correctly.
+    
+    :return: Current millisecond tick count.
+    :rtype: int
+    
+    Example:
+        start = time.ticks_ms()
+        # ... do something ...
+        duration = time.ticks_diff(time.ticks_ms(), start)
+    """
+    pass
+
+def ticks_us() -> int:
+    """Get the current microsecond counter value.
+    
+    Returns a monotonically increasing microsecond counter with arbitrary reference point.
+    The counter wraps around after reaching its maximum value (32-bit unsigned).
+    Provides higher resolution than ticks_ms() for precise timing.
+    
+    Always use ticks_diff() to calculate time differences to handle wraparound correctly.
+    
+    :return: Current microsecond tick count.
+    :rtype: int
+    
+    Example:
+        start = time.ticks_us()
+        # ... precise operation ...
+        duration_us = time.ticks_diff(time.ticks_us(), start)
+    """
+    pass
+
+def ticks_add(ticks: int, delta: int) -> int:
+    """Add a delta to a ticks value with wraparound handling.
+    
+    Performs addition on ticks values while correctly handling counter wraparound.
+    Use this instead of regular addition when working with tick counters.
+    
+    :param ticks: Base ticks value (from ticks_ms() or ticks_us()).
+    :type ticks: int
+    :param delta: Value to add (can be negative).
+    :type delta: int
+    :return: New ticks value with wraparound handling.
+    :rtype: int
+    
+    Example:
+        # Calculate a future timeout point
+        timeout = time.ticks_add(time.ticks_ms(), 5000)  # 5 seconds from now
+        while time.ticks_diff(timeout, time.ticks_ms()) > 0:
+            # Still before timeout
+            pass
+    """
+    pass
+
+def ticks_diff(ticks1: int, ticks2: int) -> int:
+    """Calculate the signed difference between two ticks values.
+    
+    Computes (ticks1 - ticks2) with proper handling of counter wraparound.
+    The result is a signed integer that can be positive or negative.
+    
+    ALWAYS use this function instead of direct subtraction when comparing ticks values.
+    
+    :param ticks1: End ticks value (from ticks_ms() or ticks_us()).
+    :type ticks1: int
+    :param ticks2: Start ticks value (from ticks_ms() or ticks_us()).
+    :type ticks2: int
+    :return: Signed difference (ticks1 - ticks2). Positive if ticks1 is later than ticks2.
+    :rtype: int
+    
+    Example:
+        start = time.ticks_ms()
+        # ... operation ...
+        end = time.ticks_ms()
+        elapsed = time.ticks_diff(end, start)  # Elapsed time in ms
+        
+        # Timeout check
+        if time.ticks_diff(time.ticks_ms(), start) > 1000:
+            print("More than 1 second elapsed")
+    """
+    pass
