@@ -1,0 +1,230 @@
+# Fullmo MovingCap CODE - micropython example.
+# original file name: time.pyi
+"""Modulo time/utime stub/interfaccia per i servoazionamenti fullmo MovingCap / CODE / Micropython
+
+Il modulo `utime` (alternativamente: `time`) fornisce un sottoinsieme del modulo `time` di MicroPython o CPython.
+
+Questa è un'implementazione limitata per la piattaforma MovingCap che fornisce funzioni di temporizzazione e ritardo.
+La funzionalità completa di data/ora (localtime, mktime, time) non è supportata su MovingCap.
+
+Per la documentazione completa sul modulo time standard di MicroPython, vedere:
+https://docs.micropython.org/en/v1.9.4/pyboard/library/utime.html
+
+Funzioni Disponibili:
+    - sleep(seconds) - Sospensione per il numero specificato di secondi
+    - sleep_ms(ms) - Sospensione per il numero specificato di millisecondi
+    - sleep_us(us) - Sospensione per il numero specificato di microsecondi
+    - ticks_ms() - Ottiene il valore del contatore in millisecondi
+    - ticks_us() - Ottiene il valore del contatore in microsecondi
+    - ticks_add(ticks, delta) - Aggiunge delta a un valore ticks
+    - ticks_diff(ticks1, ticks2) - Calcola la differenza tra valori ticks
+
+Non Disponibile su MovingCap:
+    - localtime() - Non supportato (nessun RTC)
+    - mktime() - Non supportato (nessun RTC)
+    - time() - Non supportato (nessun RTC)
+    - ticks_cpu() - Non supportato
+
+Funzioni Ticks - Note Importanti:
+    Le funzioni ticks_ms() e ticks_us() restituiscono valori in un intervallo definito
+    dall'implementazione. Sulla piattaforma MovingCap CODE attuale, i valori si riavvolgono
+    all'interno di un intervallo positivo più piccolo dell'intero intervallo a 32 bit.
+    
+    NON fare ipotesi sull'intervallo specifico dei valori o eseguire operazioni aritmetiche
+    dirette sui valori ticks. L'intervallo potrebbe cambiare nelle implementazioni future.
+    
+    Utilizzare SEMPRE queste funzioni di supporto per l'aritmetica dei ticks:
+        - ticks_diff(ticks1, ticks2) - Calcola la differenza tra due valori ticks
+        - ticks_add(ticks, delta) - Aggiunge/sottrae un offset a un valore ticks
+    
+    Queste funzioni gestiscono correttamente il wraparound indipendentemente dall'intervallo
+    dei valori sottostante.
+
+Note di Utilizzo:
+    - Utilizzare questo modulo per ritardi, misurazioni di tempo e implementazioni di timeout
+    - Per temporizzazione precisa, preferire ticks_us() rispetto a ticks_ms()
+
+Esempio di Utilizzo:
+    import time  # o: import utime
+    
+    # Ritardi semplici
+    time.sleep(1)  # Sospensione 1 secondo
+    time.sleep_ms(100)  # Sospensione 100 millisecondi
+    time.sleep_us(50)  # Sospensione 50 microsecondi
+    
+    # Misurazione del tempo
+    start = time.ticks_ms()
+    # ... fare qualcosa ...
+    elapsed = time.ticks_diff(time.ticks_ms(), start)
+    print("Trascorso:", elapsed, "ms")
+    
+    # Implementazione timeout
+    timeout = 5000  # Timeout di 5 secondi
+    start = time.ticks_ms()
+    condition = True
+    while condition:
+        if time.ticks_diff(time.ticks_ms(), start) > timeout:
+            print("Timeout!")
+            break
+        # ... fare lavoro ...
+"""
+__author__ =  "Oliver Heggelbacher"
+__email__ = "oliver.heggelbacher@fullmo.de"
+__version__ = "50.00.10.xx"
+__date__ = "2026-01-19"
+
+def sleep(seconds: int):
+    """Sospensione per il numero specificato di secondi.
+    
+    Sospende l'esecuzione per almeno il numero dato di secondi.
+    Il tempo di sospensione effettivo può essere più lungo a causa della schedulazione del sistema.
+
+    NOTA: MovingCap MicroPython attualmente non supporta i float. "seconds" non può essere un numero frazionario.
+    
+    :param seconds: Numero di secondi di sospensione.
+    :type seconds: int
+    
+    Esempio:
+        time.sleep(2)  # Sospensione per 2 secondi
+        time.sleep(1)  # Sospensione per 1 secondo
+    """
+    pass
+
+def sleep_ms(ms: int):
+    """Sospensione per il numero specificato di millisecondi.
+    
+    Sospende l'esecuzione per almeno il numero dato di millisecondi.
+    Più preciso di sleep() per ritardi brevi.
+    
+    :param ms: Numero di millisecondi di sospensione.
+    :type ms: int
+    
+    Esempio:
+        time.sleep_ms(500)  # Sospensione per 500 millisecondi
+        time.sleep_ms(10)   # Sospensione per 10 millisecondi
+    """
+    pass
+
+def sleep_us(us: int):
+    """Sospensione per il numero specificato di microsecondi.
+    
+    Sospende l'esecuzione per almeno il numero dato di microsecondi.
+    Funzione di ritardo più precisa disponibile. Per ritardi molto brevi, usare con cautela
+    poiché l'overhead di sistema può influenzare l'accuratezza.
+    
+    :param us: Numero di microsecondi di sospensione.
+    :type us: int
+    
+    Esempio:
+        time.sleep_us(1000)  # Sospensione per 1000 microsecondi (1 ms)
+        time.sleep_us(50)    # Sospensione per 50 microsecondi
+    """
+    pass
+
+def ticks_ms() -> int:
+    """Ottiene il valore corrente del contatore in millisecondi.
+    
+    Restituisce un contatore di millisecondi in aumento monotono con punto di riferimento arbitrario.
+    Il contatore si riavvolge dopo aver raggiunto un valore massimo definito dall'implementazione.
+    
+    L'intervallo specifico dei valori è dipendente dall'implementazione e può cambiare nelle versioni future.
+    Non fare MAI affidamento su un intervallo particolare o eseguire aritmetica diretta sui valori ticks.
+    
+    Utilizzare SEMPRE ticks_diff() per calcolare le differenze di tempo e ticks_add() per
+    modificare i valori ticks - queste funzioni gestiscono correttamente il wraparound.
+    
+    :return: Conteggio corrente dei tick in millisecondi (intervallo definito dall'implementazione).
+    :rtype: int
+    
+    Esempio:
+        start = time.ticks_ms()
+        # ... fare qualcosa ...
+        duration = time.ticks_diff(time.ticks_ms(), start)  # CORRETTO
+        # duration = time.ticks_ms() - start  # SBAGLIATO - non usare!
+    """
+    pass
+
+def ticks_us() -> int:
+    """Ottiene il valore corrente del contatore in microsecondi.
+    
+    Restituisce un contatore di microsecondi in aumento monotono con punto di riferimento arbitrario.
+    Il contatore si riavvolge dopo aver raggiunto un valore massimo definito dall'implementazione.
+    Fornisce una risoluzione superiore a ticks_ms() per temporizzazione precisa.
+    
+    L'intervallo specifico dei valori è dipendente dall'implementazione e può cambiare nelle versioni future.
+    Non fare MAI affidamento su un intervallo particolare o eseguire aritmetica diretta sui valori ticks.
+    
+    Utilizzare SEMPRE ticks_diff() per calcolare le differenze di tempo e ticks_add() per
+    modificare i valori ticks - queste funzioni gestiscono correttamente il wraparound.
+    
+    :return: Conteggio corrente dei tick in microsecondi (intervallo definito dall'implementazione).
+    :rtype: int
+    
+    Esempio:
+        start = time.ticks_us()
+        # ... operazione precisa ...
+        duration_us = time.ticks_diff(time.ticks_us(), start)  # CORRETTO
+    """
+    pass
+
+def ticks_add(ticks: int, delta: int) -> int:
+    """Aggiunge un delta a un valore ticks con corretta gestione del wraparound.
+    
+    Questo è il modo corretto per aggiungere o sottrarre da un valore ticks.
+    Esegue l'addizione gestendo correttamente il wraparound del contatore.
+    
+    :param ticks: Valore ticks di base (da ticks_ms() o ticks_us()).
+    :type ticks: int
+    :param delta: Valore da aggiungere (positivo) o sottrarre (negativo).
+    :type delta: int
+    :return: Nuovo valore ticks con corretta gestione del wraparound.
+    :rtype: int
+    
+    Esempio:
+        # Calcolare una scadenza a 5 secondi da ora
+        deadline = time.ticks_add(time.ticks_ms(), 5000)
+        
+        # Verificare se la scadenza è passata
+        while time.ticks_diff(deadline, time.ticks_ms()) > 0:
+            # Ancora prima della scadenza
+            pass
+    """
+    pass
+
+def ticks_diff(ticks1: int, ticks2: int) -> int:
+    """Calcola la differenza con segno tra due valori ticks.
+    
+    Questo è il modo corretto per confrontare o trovare la differenza tra valori ticks.
+    Calcola (ticks1 - ticks2) con corretta gestione del wraparound del contatore.
+    
+    Il risultato è un intero con segno:
+        - Positivo se ticks1 è "dopo" ticks2
+        - Negativo se ticks1 è "prima" di ticks2
+        - Zero se sono uguali
+    
+    Il risultato è valido finché la differenza di tempo effettiva non supera la metà
+    del periodo dei ticks (circa 149 ore per ticks_ms nell'implementazione attuale).
+    
+    :param ticks1: Primo valore ticks, tipicamente il tempo "successivo" o "finale".
+    :type ticks1: int
+    :param ticks2: Secondo valore ticks, tipicamente il tempo "precedente" o "iniziale".
+    :type ticks2: int
+    :return: Differenza con segno (ticks1 - ticks2).
+    :rtype: int
+    
+    Esempio:
+        # Misurare il tempo trascorso
+        start = time.ticks_ms()
+        # ... operazione ...
+        elapsed = time.ticks_diff(time.ticks_ms(), start)
+        
+        # Timeout basato su scadenza
+        deadline = time.ticks_add(time.ticks_ms(), 1000)
+        while time.ticks_diff(deadline, time.ticks_ms()) > 0:
+            pass  # Attendere fino alla scadenza
+        
+        # Verificare se il timeout è stato superato
+        if time.ticks_diff(time.ticks_ms(), start) > 1000:
+            print("Trascorso più di 1 secondo")
+    """
+    pass

@@ -1,0 +1,10 @@
+MovingCap-Profinet-TiA-Blocks-DE-liesmich.txt
+Fullmo-MovingCap-TiA-Blocks-DE.zip
+Stand: 2025-04-49 / www.fullmo.de / www.movingcap.de
+
+Fullmo MovingCap Ethernet TCP/IP (ETH) Kompaktantriebe
+Beispieleinbindung  als Baustein in PROFINET-Steuerung / S7 / TIA-Portal oder SIMATIC Manager
+
+Download unter:
+https://movingcap.de/user/MovingCap-Software/5-MovingCap-Profinet-Siemens/MovingCap-Profinet-TiA-Blocks-DE.zip
+

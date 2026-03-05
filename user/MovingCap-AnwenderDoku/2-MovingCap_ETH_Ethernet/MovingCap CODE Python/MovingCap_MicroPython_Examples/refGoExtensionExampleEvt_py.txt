@@ -1,0 +1,52 @@
+#id RefGoExtensionExampleEvt.py 2025-10-23 oh
+# Fullmo MovingCap CODE - micropython example.
+# original file name: refGoExtensionExampleEvt.py
+# requires turnTRACK firmware v50.00.10.00_RE higher
+
+# This example shows how to mimic the original XENAX protocol events @H, @S1, @S2..
+# Note: This is for demonstration purposes. For practical applications, 
+# calling the text-based "refgo" interface 10 times per milliseconds is a waste
+# of CPU time, but it demonstrates how fast MovingCap can run micropython code,
+# even if it includes string processing. 
+# With events enabled and used, the main loop is processed in around 0.125 milliseconds.
+
+# NOTE: In earlier firmware versions (v50.00.09.xx and lower) the 
+# functionality was split between the mccom and refgo libraries. 
+# Now refgo is the one library to include and use.
+
+import sys
+import refgo
+
+counter = 0
+ret = 0
+lasttime = sys.time()
+evtActive = 0
+oldTsValue = -1
+tsValue = 0
+refgo.open("refgo", 0)
+cmd = ""
+while (1): 
+	cmd = refgo.read(0, 0)
+	if cmd is not None:
+		if (cmd == "EVT1"):
+			evtActive = 1
+			refgo.write(0, 0, "@H\r\n")
+		elif (cmd == "EVT0"): 
+			evtActive = 0
+			oldTsValue = -1
+		# always finish with prompt
+		ret = refgo.write(0, 0, ">")
+	if evtActive == 1:
+		#  create a "@S" event from the TS (Tell Status) return value
+		tsValue = refgo.cmd("TS")
+		if tsValue is not None: 
+			if (tsValue != oldTsValue):
+				oldTsValue = tsValue
+				ret = refgo.write(0, 0, "@S" + str(tsValue) + "\r\n>")
+	counter += 1
+	if (counter == 100000):
+		print ("Performance info: " + str(counter) + " loops needed " + str(sys.time() - lasttime) + " milliseconds")
+		lasttime = sys.time()
+		counter = 0
+
+

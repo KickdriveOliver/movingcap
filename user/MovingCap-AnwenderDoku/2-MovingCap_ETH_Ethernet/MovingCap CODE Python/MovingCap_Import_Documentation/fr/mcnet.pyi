@@ -1,0 +1,261 @@
+"""Stub/interface du module mcnet pour les variateurs servo MovingCap fullmo
+
+Le module `mcnet` fournit une API de style pyserial pour la communication par socket réseau pour MovingCap CODE / Micropython sur MovingCap. 
+
+Il permet de créer des sockets serveur TCP, client TCP, serveur UDP et client/pair UDP pour une implémentation facile 
+de couches de protocole d'application personnalisées, telles que MODBUS TCP. 
+
+L'utilisation d'une API similaire à une API de communication série (au lieu d'une bibliothèque Python socket/usocket) fournit une fonctionnalité de communication extrêmement stable, sûre et pratique qui décharge le script actuel des préoccupations telles que la liaison de socket, l'acceptation ou l'établissement de connexions, le comportement de reconnexion, etc.
+
+Le module fournit une interface basée sur les classes où vous créez des objets McNet représentant des connexions réseau.
+Chaque instance McNet gère une connexion socket et fournit des méthodes pour lire et écrire des données.
+
+Format des paramètres de connexion :
+    La chaîne de paramètres passée à McNet() définit le type de connexion et les paramètres :
+    
+    - Serveur TCP : "SERVER:port" ou "SERVER:ip:port"
+        Exemple : McNet("SERVER:10001") - serveur TCP sur le port 10001, toute interface
+        Exemple : McNet("SERVER:192.168.1.100:502") - serveur TCP sur une IP spécifique
+    
+    - Client TCP : "ip:port" ou "hostname:port"
+        Exemple : McNet("192.168.1.100:502") - Se connecter au serveur TCP à IP:port
+        Exemple : McNet("plc.local:502") - Se connecter en utilisant le nom d'hôte
+    
+    - Serveur UDP : "UDP:port" ou "UDP:ip:port"
+        Exemple : McNet("UDP:5000") - serveur UDP sur le port 5000
+    
+    - Client/Pair UDP : "UDP:ip:port"
+        Exemple : McNet("UDP:192.168.1.100:5000") - Communication UDP avec hôte distant
+
+Exemple d'utilisation :
+    # Exemple de serveur TCP
+    import mcnet
+    server = mcnet.McNet("SERVER:10001")
+    server.set_line_mode(1, ord("<"), ord(">"), 0, 0, 5000)
+    while True:
+        line = server.readline()
+        if line:
+            print("Reçu:", line)
+            server.write("OK\\n")
+    
+    # Exemple de client TCP
+    client = mcnet.McNet("192.168.1.100:502")
+    if client.is_connected():
+        client.write(b"\\x00\\x01\\x00\\x00\\x00\\x06")  # Requête MODBUS
+        response = client.read(256)
+        print("Réponse:", response)
+    client.close()
+"""
+__author__ =  "Oliver Heggelbacher"
+__email__ = "oliver.heggelbacher@fullmo.de"
+__version__ = "50.00.08.xx"
+__date__ = "2025-02-03"
+
+class McNet:
+    """Classe de communication par socket réseau avec API de type pyserial.
+    
+    Cette classe représente une connexion socket réseau (TCP ou UDP, client ou serveur).
+    Elle fournit une interface simple, de type port série, pour la communication réseau.
+    """
+    
+    def __init__(self, settings: str):
+        """Créer et ouvrir une nouvelle connexion réseau.
+        
+        :param settings: Chaîne de paramètres de connexion spécifiant le type de socket et les paramètres.
+            Le format dépend du type de connexion (voir la documentation du module).
+        :type settings: str
+        :raises OSError: Si le socket ne peut pas être ouvert (par ex., tous les sockets utilisés, paramètres invalides)
+        
+        Exemple :
+            server = McNet("SERVER:10001")  # Serveur TCP
+            client = McNet("192.168.1.100:502")  # Client TCP
+        """
+        pass
+    
+    def open(self, settings: str) -> bool:
+        """Ouvrir une connexion réseau (ou rouvrir après fermeture).
+        
+        :param settings: Chaîne de paramètres de connexion (voir __init__)
+        :type settings: str
+        :return: True si réussi, False si échoué.
+        :rtype: bool
+        """
+        pass
+    
+    def is_open(self) -> bool:
+        """Vérifier si le socket est ouvert.
+        
+        Retourne True si le socket a été ouvert (même s'il n'est pas encore connecté).
+        Pour les clients TCP, cela indique que le socket existe mais peut encore être en cours de connexion.
+        Pour les serveurs TCP, cela indique que le socket du serveur est en écoute.
+        
+        :return: True si le socket est ouvert, False sinon.
+        :rtype: bool
+        """
+        pass
+    
+    def is_connected(self) -> bool:
+        """Vérifier si la connexion est établie et prête pour le transfert de données.
+        
+        Pour les clients TCP : Retourne True lorsque la connexion au serveur est établie.
+        Pour les serveurs TCP : Retourne True lorsqu'un client est connecté.
+        Pour UDP : Retourne généralement True si le socket est ouvert (UDP est sans connexion).
+        
+        :return: True si connecté, False sinon.
+        :rtype: bool
+        """
+        pass
+    
+    def close(self):
+        """Fermer la connexion réseau et libérer le socket.
+        
+        Arrête proprement la connexion et libère la ressource socket
+        pour réutilisation par d'autres instances McNet.
+        """
+        pass
+    
+    def write(self, data) -> int:
+        """Écrire des données sur la connexion réseau.
+        
+        Accepte à la fois des chaînes et des objets de type bytes. Les chaînes sont automatiquement
+        encodées en UTF-8. Les données sont envoyées sur la connexion réseau.
+        
+        :param data: Données à envoyer. Peut être str, bytes, bytearray ou memoryview.
+        :type data: str or bytes-like
+        :return: Nombre d'octets écrits, ou valeur négative en cas d'erreur.
+        :rtype: int
+        
+        Exemple :
+            s.write("Hello\\n")  # Envoyer une chaîne
+            s.write(b"\\x01\\x02\\x03")  # Envoyer des bytes
+        """
+        pass
+    
+    def read(self, size: int = 0):
+        """Lire les données disponibles depuis la connexion réseau.
+        
+        Lit jusqu'à 'size' octets depuis le tampon de réception. Si size est 0 ou omis,
+        lit toutes les données disponibles. Retourne None si aucune donnée n'est disponible.
+        
+        Le type de retour dépend du paramètre text_mode :
+        - Si text_mode est True : retourne str
+        - Si text_mode est False : retourne bytes
+        
+        :param size: Nombre maximum d'octets à lire. 0 = lire tout ce qui est disponible.
+        :type size: int
+        :return: Données lues comme str ou bytes, ou None si aucune donnée disponible.
+        :rtype: str or bytes or None
+        
+        Exemple :
+            data = s.read()  # Lire tout ce qui est disponible
+            data = s.read(100)  # Lire jusqu'à 100 octets
+        """
+        pass
+    
+    def readline(self):
+        """Lire une ligne de données en fonction de la configuration du mode ligne.
+        
+        Cette méthode utilise les paramètres d'analyse de ligne configurés avec set_line_mode().
+        Elle attend et extrait une ligne complète en fonction des marqueurs de début/fin
+        et des paramètres de temporisation.
+
+        La réponse comprend les marqueurs de début et de fin, s'ils sont spécifiés.
+                
+        Retourne None si aucune ligne complète n'est disponible ou si le délai expire.
+        
+        :return: Données de ligne comme str ou bytes (selon text_mode), ou None.
+        :rtype: str or bytes or None
+        
+        Exemple :
+            s.set_line_mode(1, ord('<'), ord('>'), 0, 0, 5000)
+            line = s.readline()  # Lit les données entre '<' et '>'
+        """
+        pass
+    
+    def read_until(self, expected: str = "\\n", size: int = 0):
+        """Lire les données jusqu'à ce qu'une séquence spécifique soit trouvée.
+        
+        Lit depuis la connexion jusqu'à ce que la séquence d'octets attendue soit rencontrée,
+        ou jusqu'à ce que 'size' octets aient été lus (si size > 0), ou jusqu'à ce qu'il n'y ait plus de données
+        disponibles.
+        
+        La séquence attendue est incluse dans les données retournées.
+        
+        :param expected: Séquence d'octets à lire jusqu'à. Peut être str ou bytes. Par défaut, nouvelle ligne.
+        :type expected: str or bytes
+        :param size: Octets maximum à lire (0 = pas de limite).
+        :type size: int
+        :return: Données lues comme str ou bytes (selon text_mode), ou None.
+        :rtype: str or bytes or None
+        
+        Exemple :
+            data = s.read_until("\\r\\n")  # Lire jusqu'à CRLF
+            data = s.read_until(b"\\x00", 1024)  # Lire jusqu'à octet nul, max 1024 octets
+        """
+        pass
+    
+    def set_line_mode(self, text_mode: int, start_marker: int, end_marker: int, min_len: int, max_len: int, timeout: int) -> int:
+        """Configurer le mode d'analyse de ligne pour la méthode readline().
+        
+        Configure comment readline() extrait les lignes du flux de données.
+        Les marqueurs de début et de fin définissent les limites de ligne, min_len et max_len
+        spécifient les longueurs de trame attendues, et le délai spécifie combien de temps 
+        attendre une ligne complète.
+        
+        :param text_mode: Si > 0, retourner les données comme str (mode texte). Si 0, retourner comme bytes.
+        :type text_mode: int
+        :param start_marker: Code ASCII du caractère marqueur de début de ligne (par ex., ord('<') = 60).
+        :type start_marker: int
+        :param end_marker: Code ASCII du caractère marqueur de fin de ligne (par ex., ord('>') = 62).
+        :type end_marker: int
+        :param min_len: Longueur minimale de trame en octets (y compris les marqueurs de début/fin).
+            Définir à 0 pour aucune contrainte de longueur minimale. Pour les protocoles binaires, cela
+            empêche les mauvaises interprétations lorsque les données utiles contiennent des octets de marqueur (ambiguïté des limites de trame).
+        :type min_len: int
+        :param max_len: Longueur maximale de trame en octets (y compris les marqueurs de début/fin).
+            Définir à 0 pour aucune contrainte de longueur maximale. Limite la portée de recherche des
+            marqueurs de fin pour éviter les débordements de tampon et imposer les limites de trame.
+        :type max_len: int
+        :param timeout: Délai en millisecondes pour attendre une ligne complète.
+        :type timeout: int
+        :return: 0 en cas de succès, négatif en cas d'erreur.
+        :rtype: int
+        
+        Exemple :
+            # Protocole texte (longueur variable)
+            s.set_line_mode(1, ord('<'), ord('>'), 0, 0, 5000)
+            
+            # Protocole binaire à longueur fixe (STX + 6 octets de données + ETX = 8 octets)
+            s.set_line_mode(0, 0x02, 0x03, 8, 8, 1000)
+            
+            # Protocole binaire à longueur variable (min 5 octets, max 256 octets)
+            s.set_line_mode(0, 0x02, 0x03, 5, 256, 1000)
+        """
+        pass
+    
+    def in_waiting(self) -> int:
+        """Obtenir le nombre d'octets disponibles dans le tampon de réception.
+        
+        Retourne le nombre d'octets qui peuvent être lus immédiatement sans blocage.
+        Utile pour vérifier si des données sont disponibles avant d'appeler read().
+        
+        :return: Nombre d'octets disponibles à lire, ou valeur négative en cas d'erreur.
+        :rtype: int
+        
+        Exemple :
+            if s.in_waiting() > 0:
+                data = s.read()
+        """
+        pass
+    
+    def reset_input_buffer(self):
+        """Vider le tampon de réception d'entrée.
+        
+        Supprime toutes les données actuellement dans le tampon de réception. Utile pour
+        resynchroniser la communication ou effacer les données obsolètes.
+        
+        Exemple :
+            s.reset_input_buffer()  # Effacer toutes les données en attente
+            s.write("NEW_REQUEST")
+        """
+        pass

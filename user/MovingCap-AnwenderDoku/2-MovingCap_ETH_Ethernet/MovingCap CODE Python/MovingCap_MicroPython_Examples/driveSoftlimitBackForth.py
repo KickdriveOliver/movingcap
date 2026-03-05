@@ -1,0 +1,33 @@
+#id driveSoftlimitBackForth.py 2025-02-04 oh
+# simple MovingCap flatTRACK application demo
+# precondition: softlimit objects 607Dh.1h and 607D.2h set
+import sys
+import mcdrive as mc
+
+def WaitTargetReached(): 
+	# Check statusword for "target reached"
+	while (mc.ChkReady() == 0):
+		sys.wait(1)
+	# only continue if no error 
+	while (mc.ChkError() != 0):
+		sys.wait(1)
+
+# safety: only run this script if softlimit objects are set up properly
+softLimitMin = mc.ReadObject(0x607d, 1) 
+softLimitMax = mc.ReadObject(0x607d, 2)
+
+if ((softLimitMin == 0 and softLimitMax == 0) or softLimitMax <= (softLimitMin + 1000)):
+	print("flatTRACK demo abort. Check softlimit objects 607Dh.1h and 607Dh.2h!") 
+else: 
+    # initial wait, don't surprise me with immediate movement
+    sys.wait(5000)
+
+    # general init
+    mc.EnableDrive()
+    mc.SetPosVel(50000)
+    # and go...
+    while (1):
+        mc.GoPosAbs(softLimitMin)
+        WaitTargetReached()
+        mc.GoPosAbs(softLimitMax)
+        WaitTargetReached()

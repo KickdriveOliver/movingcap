@@ -1,0 +1,130 @@
+#id autoHomeLeftRight.py rev1 2024-07-25 oh
+# Fullmo MovingCap CODE - micropython example.
+# original file name: driveAutoHomeLeftRight.py
+# Example application for MovingCap turnTRACK 349 Ethernet rotary drives or 
+# maxTRACK linear belt drive axis. 
+# 1. Start Homing Method 19 - search limit in positive direction, using limit switch
+# 2. Search limit in negative direction, using a second limit switch
+# 3. Position to left limit (considering extra buffer space)
+# 4. Define softlimit min / max. 
+# 
+# How to use: 
+# 1) Set object 340Ch.1h to 1 . E.g use RefGo TCP command OW340C,1,1 
+#    --> starts homing / limit search routine
+# 2) check 340Ch.1h status:
+# 	  > 0 : homing active
+#    -1 : homing successful 
+# 	 -2 : homing error
+import sys
+import mcdrive as mc
+
+# which input use for left and right limit search
+HOME_INPUT_LEFT = 1
+HOME_INPUT_RIGHT = 2
+
+HOME_SPEED = 360
+HOME_ACC = 500
+HOME_TORQUE = 250
+
+NORMAL_SPEED = 720
+NORMAL_ACC = 2000
+NORMAL_DEC = 800
+NORMAL_TORQUE = 1000
+# extra buffer between softlimit and actual limit switch position
+LIMIT_BUFFER = 1000 
+
+homingState = 0 
+oldHomingState = 0 
+leftLimitPos = 0
+
+def getHomingState():
+	return mc.ReadObject(0x340c, 1)
+
+def setHomingState(x):
+	mc.WriteObject(0x340c, 1 , x)
+	
+def LeftRightHoming():
+	global oldHomingState
+	global homingState
+	global leftLimitPos
+	# simple state machine
+	oldHomingState = homingState
+	homingState = getHomingState()
+	if (homingState == 0):
+		if (oldHomingState > 0):
+			# user abort 
+			mc.PowerQuit()
+	elif (homingState == 1):
+		setHomingState(2)
+		# new homing requested:
+		# reset DS402 softlimit min / max
+		mc.WriteObject(0x607d, 1, 0)
+		mc.WriteObject(0x607d, 2, 0)
+		mc.SetTorque(HOME_TORQUE)	
+		# select switch to use for homing: DS402 object 60B8h.0h Touch Probe Function
+		mc.WriteObject(0x60B8, 0, HOME_INPUT_RIGHT & 0xf)  
+		# use DS402 homing method 19 (search for limit in positive direction)
+		mc.GoHome(19, HOME_SPEED, HOME_ACC, LIMIT_BUFFER)
+		# (!Errata: current MovingCap Ethernet firmware does not support homing method "18 - search in negative direction")
+	elif (homingState == 2):
+		if (mc.ChkReady()):
+			if (mc.ChkError()):
+				# error while looking for right limit
+				mc.PowerQuit()
+				setHomingState(-2)
+			else:
+				# right limit found
+				setHomingState(3)
+				# now check the right one: 
+				# set IO function "Capture Position". (This will reset the result registers to zero)
+				mc.WriteObject(0x3510 + HOME_INPUT_LEFT, 1, 0x0100)
+				# and I would walk 500 miles...
+				mc.SetAcc(HOME_ACC)		
+				mc.SetDec(HOME_ACC)
+				mc.GoVel(-HOME_SPEED)
+	elif (homingState == 3):
+		if (mc.ChkError()):
+			# error while looking for left limit
+			mc.PowerQuit()
+			setHomingState(-3)			
+		else:
+			leftLimitPos = mc.ReadObject(0x3510 + HOME_INPUT_LEFT, 3)
+			if (leftLimitPos != 0):
+				leftLimitPos = leftLimitPos + LIMIT_BUFFER
+				if (leftLimitPos < 0):
+					# left limit found
+					setHomingState(4)
+					# go in the middle
+					# (note: python integer divison "//" required)
+					mc.SetPosVel(HOME_SPEED)
+					mc.GoPosAbs(leftLimitPos) 
+				else:
+					# positioning range not large enough. Error
+					mc.PowerQuit()
+					setHomingState(-4)
+	elif (homingState == 4):
+		if (mc.ChkReady()):
+			if (mc.ChkError()):
+				# error while going to the left position
+				mc.PowerQuit()
+				setHomingState(-5)
+			else: 
+				# set this as current zero point
+				mc.GoHome(35, 0, 0, 0)
+				while not mc.ChkReady():
+					sys.wait(1)
+				# set positive value range
+				mc.WriteObject(0x607d, 1, 0)
+				mc.WriteObject(0x607d, 2, -leftLimitPos)
+				# success
+				setHomingState(-1)
+				# back to full torque
+				mc.SetAcc(NORMAL_ACC)
+				mc.SetDec(NORMAL_DEC)
+				mc.SetPosVel(NORMAL_SPEED)
+				mc.SetTorque(NORMAL_TORQUE)
+				mc.GoPosAbs(0)
+
+# main loop
+while (1):
+	LeftRightHoming()

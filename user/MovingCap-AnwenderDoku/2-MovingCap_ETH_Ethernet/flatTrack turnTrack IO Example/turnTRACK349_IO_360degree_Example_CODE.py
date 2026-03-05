@@ -1,0 +1,82 @@
+#id turnTRACK349_IO_360degree_Example_CODE.py 2025-05-06 oh
+
+import sys
+import mcdrive as mc
+
+# basic gear & feed setup first
+MC349_BASIC_SETUP_GEAR5TO1_360DEG = """
+050.3401h.15h,unsigned16,1000 # Acc. Torque [0.1%]
+050.3401h.16h,unsigned16,1000 # Dec. Torque [0.1%]
+050.3401h.18h,unsigned16,1000 # Stall Torque [0.1%]
+050.6073h.00h,unsigned16,1000 # Max. Current/Torque [0.1%]
+050.6091h.01h,unsigned32,5 # Motor revolutions
+050.6091h.02h,unsigned32,1 # Shaft revolutions
+050.6092h.01h,unsigned32,360 # Feed
+050.6092h.02h,unsigned32,1 # Shaft revolutions
+050.6067h.00h,unsigned32,2 # Target Reached Window [user units]
+050.6068h.00h,unsigned16,50 # Target Window Time [ms]
+050.607dh.01h,integer32,0 # Softlimit - Min Pos [user units]
+050.607dh.02h,integer32,360 # Softlimit - Max Pos [user units]
+050.60f2h.00h,unsigned16,128 # Positioning option code
+"""
+
+MC349_IO_TURN349DEG_APP = """
+050.3511h.01h,unsigned16,1536 # IN1 function
+050.3511h.05h,integer32,0 # IN1 timer
+050.3511h.06h,integer32,30 # IN1 velocity
+050.3511h.07h,integer32,500 # IN1 acceleration
+050.3511h.08h,integer32,360 # IN1 target pos
+050.3511h.09h,integer32,500 # IN1 deceleration
+050.3511h.0ah,integer32,1000 # IN1 max current / torque
+050.3512h.01h,unsigned16,1024 # IN2 function
+050.3512h.02h,unsigned16,0 # IN2 txPDO
+050.3512h.05h,integer32,0 # IN2 timer
+050.3512h.06h,integer32,60 # IN2 velocity
+050.3512h.07h,integer32,500 # IN2 acceleration
+050.3512h.08h,integer32,0 # IN2 target pos
+050.3512h.09h,integer32,500 # IN2 deceleration
+050.3512h.0ah,integer32,1000 # IN2 max current / torque
+050.3513h.01h,unsigned16,0 # IN3 function
+050.3514h.01h,unsigned16,0 # IN4 function
+050.3611h.01h,unsigned16,6 # OUT1 function
+050.3611h.02h,unsigned16,0 # OUT1 configuration
+050.3611h.03h,integer32,0 # OUT1 right position
+050.3611h.04h,integer32,0 # OUT1 left position
+050.3611h.05h,integer32,2 # OUT1 right pos. distance
+050.3611h.06h,integer32,2 # OUT1 left pos. distance
+050.3612h.01h,unsigned16,0 # OUT2 function
+"""
+
+def WriteObjectsFromKickdriveList(kickdriveTxtExportString):
+    """
+    This function takes a Kickdrive Object Editor text list and sets the parameters
+
+    Parameters:
+    kickdriveTxtExportString (str): A string containing KickDrive export data. 
+    EEach line represents a CANopen object as comma seperated list  format "ID,Type,Value". 
+    IDs contain NodeId, index and subindex in format 050.3401h.03h (for example) 
+    Values are in decimal format. Everything after '#' is  a comment / ignored.
+
+    Returns:
+    None. The function prints a message for each object written to the drive.
+    """
+    # Create a list of parameters
+    params = [line.split(',') for line in kickdriveTxtExportString.split('\n') if line.strip()]
+    # Iterate through each parameter
+    for param in params:
+        # Skip lines without an ID
+        if len(param) < 2:
+            continue
+        id = param[0].split('.')
+        index = int(id[1].rstrip('h'), 16)
+        subindex = int(id[2].rstrip('h'), 16)
+        value = int(param[2].split('#')[0])
+        mc.WriteObject(index, subindex, value)
+        print ("Writing object " + hex(index) + "," + hex(subindex) + " = " + str(value))
+		
+		
+# the order is important here: 
+# first set up the gear ratio & position scaling
+WriteObjectsFromKickdriveList(MC349_BASIC_SETUP_GEAR5TO1_360DEG)
+# Now write the IO configuration with target positions scaled in degrees
+WriteObjectsFromKickdriveList(MC349_IO_TURN349DEG_APP)

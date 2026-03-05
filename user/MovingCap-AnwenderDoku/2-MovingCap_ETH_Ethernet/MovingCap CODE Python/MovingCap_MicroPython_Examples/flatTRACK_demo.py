@@ -1,0 +1,55 @@
+#id rev5 flatTRACK RABBIT demo 2025-02-04 oh
+# Example application for MovingCap flatTRACK 100 with firmware v53.01.07.xx_FLAT 
+import sys
+import mcdrive as mc
+
+def WaitTargetReached(): # Check statusword for "target reached" and "no error" 
+	while (mc.ChkReady() == 0):
+		sys.wait(1)
+	while (mc.ChkError() != 0):
+		sys.wait(1)
+
+# only run this script if softlimit is set up properly
+softLimitMin = mc.ReadObject(0x607d, 1) 
+softLimitMax = mc.ReadObject(0x607d, 2)
+if ((softLimitMax - softLimitMin < 50000) or softLimitMax > 999999):
+	print("flatTRACK demo abort. Check softlimit objects 607Dh.1h and 607D.2h!") 
+else: 
+	# initial wait, don't surprise me with immediate movement
+	sys.wait(5000)
+	# switch on positioning mode
+	mc.EnableDrive()
+	# and go...
+	while(1):
+		mc.SetAcc(50)
+		mc.WriteObject(0x60A4, 0, 1000)
+		mc.SetPosVel(50000)
+		mc.GoPosAbs(softLimitMin + 5000)
+		WaitTargetReached()
+		sys.wait(2000)
+
+		mc.SetAcc(10000)
+		mc.WriteObject(0x60A4, 0, 500000)
+		mc.SetPosVel(200000)
+		mc.GoPosAbs(softLimitMin + 20000)
+		WaitTargetReached()
+		sys.wait(2000)
+		
+		mc.SetAcc(15000)
+		mc.WriteObject(0x60A4, 0, 1000000)
+		mc.SetPosVel(500000)
+		mc.GoPosAbs(softLimitMin + 20000)
+		WaitTargetReached()
+		i = 0
+		while (i < 15):
+			i = i + 1
+			sys.wait(200)
+			mc.GoPosAbs(softLimitMin + 20000 + i * 3000)
+		sys.wait(1000)
+		
+		mc.SetAcc(20000)
+		mc.WriteObject(0x60A4, 0, 200000)
+		mc.SetPosVel(1000000)
+		mc.GoPosAbs(softLimitMax - 5000)
+		WaitTargetReached()
+		sys.wait(5000)

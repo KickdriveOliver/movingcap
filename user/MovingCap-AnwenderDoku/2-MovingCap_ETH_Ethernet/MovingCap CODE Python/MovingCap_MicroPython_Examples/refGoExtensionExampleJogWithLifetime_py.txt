@@ -1,0 +1,41 @@
+#id jogWithLifetime.py 2025-10-23 oh
+# Fullmo MovingCap CODE - micropython example.
+# original file name: refGoExtensionExampleJogWithLifetime.py
+# requires turnTRACK firmware v50.00.10.00_RE higher
+
+# This example shows how to extend the original XENAX protocol commands 
+# JP (Jog Positive) and JN (Jog Negative) with an integer argument that 
+# specifies a lifetime in milliseconds. When the lifetime expires, and
+# no additional JP or JP commands were received, the drive will stop (SM / Stop Motion)
+# 
+# NOTE: For future firmware versions it is planned to add the lifetime argument to the 
+# standard REFGO command set, so this script will become obsolete. 
+#
+# NOTE: In earlier firmware versions (v50.00.09.xx and lower) the 
+# functionality was split between the mccom and refgo libraries. 
+# Now refgo is the one library to include and use.
+
+import sys
+import refgo
+
+refgo.open("refgo", 0)
+cmd = ""
+lifetimeEnabled = False
+endOfLife = 0 
+lifetime = 0
+while (1): 
+	cmd = refgo.read(0, 0)
+	if cmd is not None:
+		if (cmd.upper().startswith("JP") or cmd.upper().startswith("JN")):
+			# check for an optional integer number > 0 after the "JP" text, e.g. the full command could be "JP500"
+			strArgument = cmd.lstrip('JPN') # extract lifetime from command, if present
+			if (strArgument.isdigit()):
+				lifetime = int(strArgument)
+				if lifetime > 0:
+					lifetimeEnabled = True
+					endOfLife = sys.time() + lifetime  # calculate end of life time in milliseconds
+	if lifetimeEnabled and (sys.time() - endOfLife) > 0:  # if lifetime has expired, stop motion
+		lifetimeEnabled = False
+		answ = refgo.cmd("SM")
+	# no need to run this faster than in a 5ms cycle
+	sys.wait(5) 

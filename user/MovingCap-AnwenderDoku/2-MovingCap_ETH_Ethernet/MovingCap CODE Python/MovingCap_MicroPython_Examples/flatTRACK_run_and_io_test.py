@@ -1,0 +1,84 @@
+#id flatTRACK_run_and_io_test rev1
+import sys
+import mcdrive a drive
+
+# 
+myInOutNo = 0
+
+def ChkReady(): # Check statusword for "target reached" and "no error" 
+	while (drive.ChkReady() == 0):
+		sys.wait(1)
+	while (drive.ChkError() != 0):
+		sys.wait(1)
+
+# this assumes that every IN1-4 is connected with the corresponding OUT1-4
+def InOutSwitching():
+	global myInOutNo
+	myInOutNo = myInOutNo + 1
+	if (myInOutNo == 5):
+		myInOutNo = 1
+	before = drive.ChkIn(myInOutNo)
+	print('switching OUT' + str(myInOutNo) + ' from ' + str(before) + ' to ' + str(1-before))
+	if (before == 0): 
+		drive.SetOut(myInOutNo)
+	else:
+		drive.ClearOut(myInOutNo)
+	while (before == drive.ChkIn(myInOutNo)):
+		sys.wait(1)
+	print('IN' + str(myInOutNo) + ' is now ' + str(drive.ChkIn(myInOutNo)))
+
+# safety: only run this script if softlimit objects are set up properly
+softLimitMin = drive.ReadObject(0x607d, 1) 
+softLimitMax = drive.ReadObject(0x607d, 2)
+if (softLimitMin > 999999 or softLimitMax <= (softLimitMin + 20000) or softLimitMax > 999999):
+	print("flatTRACK demo abort. Check softlimit objects 607Dh.1h and 607D.2h!") 
+
+else:
+	# initial wait, don't surprise me with immediate movement
+	sys.wait(3000)
+	# switch on positioning mode
+	drive.EnableDrive()
+	# some variables
+	myInOutNo = 1
+	# and go...
+	while(1):
+		# smooth start
+		drive.SetAcc(2000)
+		drive.SetDec(2000)
+		drive.SetPosVel(10000)
+		drive.GoPosAbs(softLimitMin + 5000)
+		ChkReady()
+		sys.wait(2000)
+
+		# use a middle position for more action 
+		drive.SetAcc(15000)
+		drive.SetDec(15000)
+		drive.SetPosVel(50000)
+		drive.GoPosAbs(50000)
+		ChkReady()
+		sys.wait(2000)
+		
+		# tick start position 
+		drive.SetAcc(50000)
+		drive.SetDec(200000)
+		drive.SetPosVel(100000)
+		drive.GoPosAbs(70000)
+		ChkReady()
+		drive.SetDec(250000)
+		drive.SetPosVel(200000)
+		# 15 fast ticks, accurate positioning within < 160ms
+		i = 0
+		while (i < 15):
+			i = i + 1
+			sys.wait(160)
+			myInput = drive.ChkIn(myInOutNo)
+			drive.GoPosAbs(70000 + i * 3000)
+			InOutSwitching()
+		
+		# approach the upper position limit 
+		drive.SetAcc(5000)
+		drive.SetDec(20000)
+		drive.SetPosVel(30000)
+		drive.GoPosAbs(softLimitMax - 5000) 
+		ChkReady()
+		sys.wait(2000)
